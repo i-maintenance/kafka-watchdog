@@ -1,0 +1,4 @@
+.idea/
+.python-version
+fabfile.py
+__pycache__/
