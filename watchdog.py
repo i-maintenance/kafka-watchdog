@@ -19,11 +19,8 @@ consumers = [KafkaConsumer(topic, bootstrap_servers=BOOTSTRAP_SERVERS, api_versi
 
 while True:
     for consumer in consumers:
-
         logger.info('Checking topics %s', consumer.subscription())
-
         messages = consumer.poll(timeout_ms=TIMEOUT * 1000)
-
         if not messages:
             text = 'No messages in {} received within {} seconds.'.format(consumer.subscription(), TIMEOUT)
             slack.notify(attachments=[{'title': 'Kafka Warning', 'text': text, 'color': 'warning'}])
