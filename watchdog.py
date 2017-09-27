@@ -1,18 +1,31 @@
+import logging
 from kafka import KafkaConsumer
 import time
 import slackweb
 import os
 
-timeout = 120  # in seconds
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+TIMEOUT = 120  # in seconds
+OBSERVED_TOPICS = ['node-red-message', 'SensorData']
+BOOTSTRAP_SERVERS = ['il061', 'il062', 'il063']
+
 slack = slackweb.Slack(url=os.getenv('SLACK_URL'))
 slack.notify(text='Started Kafka watchdog on host {}'.format(os.uname()[1]))
 
-consumer = KafkaConsumer('node-red-message', bootstrap_servers=['il061', 'il062', 'il063'], api_version=(0, 9))
-while True:
-    messages = consumer.poll(timeout_ms=timeout * 1000)
+consumers = [KafkaConsumer(topic, bootstrap_servers=BOOTSTRAP_SERVERS, api_version=(0, 9))
+             for topic in OBSERVED_TOPICS]
 
-    if not messages:
-        slack.notify(attachments=[{'title': 'Kafka Warning',
-                                   'text': 'No messages received within {} seconds.'.format(timeout),
-                                   'color': 'warning'}])
+while True:
+    for consumer in consumers:
+
+        logger.info('Checking topics %s', consumer.subscription())
+
+        messages = consumer.poll(timeout_ms=TIMEOUT * 1000)
+
+        if not messages:
+            text = 'No messages in {} received within {} seconds.'.format(consumer.subscription(), TIMEOUT)
+            slack.notify(attachments=[{'title': 'Kafka Warning', 'text': text, 'color': 'warning'}])
+
     time.sleep(5)
