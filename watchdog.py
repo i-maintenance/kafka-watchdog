@@ -1,11 +1,21 @@
 import logging
-from kafka import KafkaConsumer
-import time
-import slackweb
 import os
+import sys
+import time
 
-logging.basicConfig(level=logging.INFO)
+import slackweb
+from kafka import KafkaConsumer
+from logstash import TCPLogstashHandler
+
+# setup logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+console_logger = logging.StreamHandler(stream=sys.stdout)
+console_logger.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
+logstash_logger = TCPLogstashHandler(host=os.getenv('LOGSTASH_HOST', 'localhost'),
+                                     port=int(os.getenv('LOGSTASH_PORT', 5000)),
+                                     version=1)
+[logger.addHandler(l) for l in [console_logger, logstash_logger]]
 
 TIMEOUT = 120  # in seconds
 OBSERVED_TOPICS = ['node-red-message', 'SensorData']
@@ -23,6 +33,9 @@ while True:
         messages = consumer.poll(timeout_ms=TIMEOUT * 1000)
         if not messages:
             text = 'No messages in {} received within {} seconds.'.format(consumer.subscription(), TIMEOUT)
+            logger.error(text)
             slack.notify(attachments=[{'title': 'Kafka Warning', 'text': text, 'color': 'warning'}])
+        else:
+            logger.info('Received %d messages in topic %s', len(messages), consumer.subscription())
 
     time.sleep(5)

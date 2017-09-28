@@ -1,3 +1,4 @@
 kafka-python
 slackweb
 Fabric3
+python-logstash
