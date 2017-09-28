@@ -7,10 +7,10 @@ import slackweb
 from kafka import KafkaConsumer
 from logstash import TCPLogstashHandler
 
-logging.basicConfig(level='DEBUG')
+# logging.basicConfig(level='DEBUG')
 
 # setup logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('kafka-watchdog')
 logger.setLevel(logging.INFO)
 console_logger = logging.StreamHandler(stream=sys.stdout)
 console_logger.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
