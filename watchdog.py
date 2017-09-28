@@ -12,19 +12,19 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 console_logger = logging.StreamHandler(stream=sys.stdout)
 console_logger.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
-logstash_logger = TCPLogstashHandler(host=os.getenv('LOGSTASH_HOST', 'localhost'),
-                                     port=int(os.getenv('LOGSTASH_PORT', 5000)),
-                                     version=1)
-[logger.addHandler(l) for l in [console_logger, logstash_logger]]
+logstash_handler = TCPLogstashHandler(host=os.getenv('LOGSTASH_HOST', 'localhost'),
+                                      port=int(os.getenv('LOGSTASH_PORT', 5000)),
+                                      version=1)
+[logger.addHandler(l) for l in [console_logger, logstash_handler]]
 
 TIMEOUT = 120  # in seconds
-OBSERVED_TOPICS = ['node-red-message', 'SensorData']
+OBSERVED_TOPICS = ['SensorData', 'node-red-message']
 BOOTSTRAP_SERVERS = ['il061', 'il062', 'il063']
 
 slack = slackweb.Slack(url=os.getenv('SLACK_URL'))
 slack.notify(text='Started Kafka watchdog on host {}'.format(os.uname()[1]))
 
-consumers = [KafkaConsumer(topic, bootstrap_servers=BOOTSTRAP_SERVERS, api_version=(0, 9))
+consumers = [KafkaConsumer(topic, bootstrap_servers=BOOTSTRAP_SERVERS)
              for topic in OBSERVED_TOPICS]
 
 while True:
