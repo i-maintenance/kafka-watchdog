@@ -58,7 +58,7 @@ while True:
                 continue
             finally:
                 trials += 1
-                time.sleep(TIMEOUT/RETRIES/len(SERVICES))
+                time.sleep(3) #TIMEOUT/RETRIES/len(SERVICES))
                 if trials >= RETRIES:
                     break
 
@@ -67,7 +67,7 @@ while True:
             logger.error(text)
             slack.notify(attachments=[{'title': 'Datastack Warning', 'text': text, 'color': 'warning'}])
         else:
-            logger.info('Reached service {} in on {}'.format(name, hostname))
+            logger.info('Reached service {} on {}'.format(name, hostname))
 
     time.sleep(15)
 
