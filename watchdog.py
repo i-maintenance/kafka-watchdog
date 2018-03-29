@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import time
+import requests
 
 import slackweb
 from kafka import KafkaConsumer
@@ -10,7 +11,7 @@ from logstash import TCPLogstashHandler
 # logging.basicConfig(level='DEBUG')
 
 # setup logging
-logger = logging.getLogger('kafka-watchdog')
+logger = logging.getLogger('kafka-watchdog.logging')
 logger.setLevel(logging.INFO)
 console_logger = logging.StreamHandler(stream=sys.stdout)
 console_logger.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
@@ -20,6 +21,9 @@ logstash_handler = TCPLogstashHandler(host=os.getenv('LOGSTASH_HOST', 'localhost
 [logger.addHandler(l) for l in [console_logger, logstash_handler]]
 
 TIMEOUT = 60  # in seconds
+RETRIES = 5
+SERVICES = [("db-adapter", "il060:3030"), ("Elastic-Stack", "il060:9600"),
+         ("SensorThings", "il060:8082")]
 OBSERVED_TOPICS = ['SensorData', 'node-red-message', ]
 BOOTSTRAP_SERVERS = ['il061', 'il062', 'il063']
 
@@ -40,4 +44,31 @@ while True:
         else:
             logger.info('Received %d messages in topic %s', len(messages), consumer.subscription())
 
-    time.sleep(5)
+    for name, hostname in SERVICES:
+        logger.info('Checking service {} on {}'.format(name, hostname))
+        reachable = False
+        trials = 0
+        while not reachable:
+            try:
+                r = requests.get("http://" + hostname)
+                status_code = r.status_code
+                if status_code in [200]:
+                    reachable = True
+            except:
+                continue
+            finally:
+                trials += 1
+                time.sleep(TIMEOUT/RETRIES/len(SERVICES))
+                if trials >= RETRIES:
+                    break
+
+        if not reachable:
+            text = 'No messages in {} received within {} trials.'.format(name, RETRIES)
+            logger.error(text)
+            slack.notify(attachments=[{'title': 'Datastack Warning', 'text': text, 'color': 'warning'}])
+        else:
+            logger.info('Reached service {} in on {}'.format(name, hostname))
+
+    time.sleep(15)
+
+
