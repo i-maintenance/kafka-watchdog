@@ -22,13 +22,14 @@ logstash_handler = TCPLogstashHandler(host=os.getenv('LOGSTASH_HOST', 'localhost
 
 TIMEOUT = 60  # in seconds
 RETRIES = 5
+HOST = os.getenv('HOST_NAME')
 SERVICES = [("db-adapter", "il060:3030"), ("Elastic-Stack", "il060:9600"),
          ("SensorThings", "il060:8082")]
 OBSERVED_TOPICS = ['SensorData', 'node-red-message', ]
 BOOTSTRAP_SERVERS = ['il061', 'il062', 'il063']
 
 slack = slackweb.Slack(url=os.getenv('SLACK_URL'))
-slack.notify(text='Started Kafka watchdog on host {}'.format(os.uname()[1]))
+slack.notify(text='Started Kafka watchdog on host {}'.format(HOST))
 
 consumers = [KafkaConsumer(topic, bootstrap_servers=BOOTSTRAP_SERVERS, api_version=(0, 9))
              for topic in OBSERVED_TOPICS]
@@ -44,13 +45,13 @@ while True:
         else:
             logger.info('Received %d messages in topic %s', len(messages), consumer.subscription())
 
-    for name, hostname in SERVICES:
-        logger.info('Checking service {} on {}'.format(name, hostname))
+    for name, url in SERVICES:
+        logger.info('Checking service {} on {}'.format(name, url))
         reachable = False
         trials = 0
         while not reachable:
             try:
-                r = requests.get("http://" + hostname)
+                r = requests.get("http://" + url)
                 status_code = r.status_code
                 if status_code in [200]:
                     reachable = True
@@ -67,7 +68,7 @@ while True:
             logger.error(text)
             slack.notify(attachments=[{'title': 'Datastack Warning', 'text': text, 'color': 'warning'}])
         else:
-            logger.info('Reached service {} on {}'.format(name, hostname))
+            logger.info('Reached service {} on {}'.format(name, url))
 
     time.sleep(15)
 
