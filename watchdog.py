@@ -36,17 +36,17 @@ consumers = [KafkaConsumer(topic, bootstrap_servers=BOOTSTRAP_SERVERS, api_versi
 
 while True:
     for consumer in consumers:
-        logger.info('Checking topics %s', consumer.subscription())
+        logger.debug('Checking topics %s', consumer.subscription())
         messages = consumer.poll(timeout_ms=TIMEOUT * 1000)
         if not messages:
             text = 'No messages in {} received within {} seconds.'.format(consumer.subscription(), TIMEOUT)
             logger.error(text)
             slack.notify(attachments=[{'title': 'Kafka Warning', 'text': text, 'color': 'warning'}])
         else:
-            logger.info('Received %d messages in topic %s', len(messages), consumer.subscription())
+            logger.debug('Received %d messages in topic %s', len(messages), consumer.subscription())
 
     for name, url in SERVICES:
-        logger.info('Checking service {} on {}'.format(name, url))
+        logger.debug('Checking service {} on {}'.format(name, url))
         reachable = False
         trials = 0
         while not reachable:
@@ -65,10 +65,10 @@ while True:
 
         if not reachable:
             text = 'No messages in {} received within {} trials.'.format(name, RETRIES)
-            logger.error(text)
+            logger.warning(text)
             slack.notify(attachments=[{'title': 'Datastack Warning', 'text': text, 'color': 'warning'}])
         else:
-            logger.info('Reached service {} on {}'.format(name, url))
+            logger.debug('Reached service {} on {}'.format(name, url))
 
     time.sleep(15)
 
